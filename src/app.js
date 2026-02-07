@@ -1,6 +1,7 @@
+// app.js
 const express = require('express');
 const session = require('cookie-session');
-const pool = require('./db');
+const pool = require('./db'); // убедись, что у тебя есть db.js с настройками PostgreSQL
 const app = express();
 
 app.use(express.json());
@@ -11,14 +12,15 @@ app.use(session({
     maxAge: 24 * 60 * 60 * 1000
 }));
 
+// --- layout ---
 const layout = (body, user = null) => `
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <title>Management System</title>
 </head>
 <body class="bg-light">
@@ -39,6 +41,7 @@ const layout = (body, user = null) => `
 </html>
 `;
 
+// --- middleware для проверки авторизации ---
 const checkStatus = async (req, res, next) => {
     if (!req.session.userId) return res.redirect('/login');
     try {
@@ -55,6 +58,7 @@ const checkStatus = async (req, res, next) => {
     }
 };
 
+// --- маршруты ---
 app.get('/login', (req, res) => {
     res.send(layout(`
         <div class="row justify-content-center">
@@ -130,6 +134,7 @@ app.post('/register', async (req, res) => {
     }
 });
 
+// --- дальше все маршруты только для авторизованных пользователей ---
 app.use(checkStatus);
 
 app.get('/users', async (req, res) => {
@@ -196,12 +201,7 @@ app.get('/logout', (req, res) => {
     res.redirect('/login');
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
-
-module.exports = app;
+module.exports = app; // ✅ экспортируем app
 
 
 
