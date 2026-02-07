@@ -8,37 +8,40 @@ const pool = new Pool({
     }
 });
 
-// Функция для автоматического создания таблицы
-const initDb = async () => {
+// Функция, которая автоматически пересоздаст правильную таблицу
+const fixDatabase = async () => {
     try {
+        // Сначала удаляем старую таблицу, чтобы создать новую с правильными полями
+        await pool.query('DROP TABLE IF EXISTS users CASCADE;');
+        
         const createTableQuery = `
-            CREATE TABLE IF NOT EXISTS users (
+            CREATE TABLE users (
                 id SERIAL PRIMARY KEY,
                 name VARCHAR(100),
                 email VARCHAR(100) UNIQUE NOT NULL,
-                password VARCHAR(255) NOT NULL,
-                status VARCHAR(20) DEFAULT 'active',
-                last_login TIMESTAMP,
-                registration_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                password VARCHAR(255) DEFAULT '123',
+                is_blocked BOOLEAN DEFAULT false,
+                last_login_time TIMESTAMP
             );
         `;
         await pool.query(createTableQuery);
-        console.log('Таблица users готова к работе! ✅');
+        console.log('Таблица users успешно пересоздана под app.js! ✅');
     } catch (err) {
-        console.error('Ошибка при создании таблицы:', err.message);
+        console.error('Ошибка при обновлении таблицы:', err.message);
     }
 };
 
-// Запускаем проверку при подключении
+// Проверка подключения и запуск исправления
 pool.query('SELECT NOW()', (err, res) => {
     if (err) {
         console.error('Ошибка подключения к базе данных:', err.message);
     } else {
-        console.log('База данных успешно подключена! 🐘');
-        initDb(); // Создаем таблицу, если её нет
+        console.log('База подключена. Начинаю обновление структуры...');
+        fixDatabase();
     }
 });
 
 module.exports = pool;
+
 
 
