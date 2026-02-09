@@ -24,7 +24,6 @@ const layout = (body) => `
             background: url('https://images.unsplash.com/photo-1498623116890-37e912163d5d?q=80&w=1974&auto=format&fit=crop') no-repeat center center; 
             background-size: cover; border-radius: 4px; flex-shrink: 0;
         }
-        @media (max-width: 992px) { .main-wrapper { flex-direction: column; gap: 40px; } .image-box { width: 300px; height: 300px; } }
         .nav-header { border-bottom: 1px solid #eee; padding: 15px 30px; display: flex; justify-content: space-between; position: fixed; top: 0; width: 100%; background: #fff; z-index: 1000; }
         .btn-toolbar-custom .btn { margin-right: 4px; border-radius: 4px; }
         .sparkline-bar { width: 4px; background: #0d6efd; border-radius: 1px; }
@@ -57,18 +56,18 @@ const checkStatus = async (req, res, next) => {
 };
 
 app.get('/login', (req, res) => {
-    const errorMsg = req.query.error ? `<div class="alert alert-danger py-2 small mb-4 text-center" style="background-color: #f8d7da; border: 1px solid #f5c2c7; color: #842029; border-radius: 4px;">${req.query.error}</div>` : '';
+    const errorMsg = req.query.error ? `<div class="alert alert-danger py-2 small mb-4 text-center" style="background-color: #f8d7da; border: 1px solid #f5c2c7; color: #842029;">\${req.query.error}</div>` : '';
     res.send(layout(`
         <div class="login-page">
             <div class="main-wrapper">
                 <div class="login-content text-center">
                     <h2 class="text-primary fw-bold mb-5" style="letter-spacing: 2px;">THE APP</h2>
                     <h4 class="fw-bold mb-4">Sign In</h4>
-                    ${errorMsg}
+                    \${errorMsg}
                     <form action="/login" method="POST">
                         <input type="email" name="email" class="form-control mb-3" placeholder="Email" required>
                         <input type="password" name="password" class="form-control mb-3" value="123" required>
-                        <button class="btn btn-primary w-100 py-2 fw-bold" style="background-color: #0d6efd;">Sign In</button>
+                        <button class="btn btn-primary w-100 py-2 fw-bold">Sign In</button>
                     </form>
                     <div class="mt-4 small text-muted">
                         New here? <a href="/register" class="text-primary fw-bold text-decoration-none">Sign up</a>
@@ -94,7 +93,7 @@ app.post('/login', async (req, res) => {
 });
 
 app.get('/register', (req, res) => {
-    res.send(layout(\`
+    res.send(layout(`
         <div class="login-page">
             <div class="main-wrapper">
                 <div class="login-content text-center">
@@ -103,14 +102,14 @@ app.get('/register', (req, res) => {
                     <form action="/register" method="POST">
                         <input type="text" name="name" class="form-control mb-3" placeholder="Name" required>
                         <input type="email" name="email" class="form-control mb-3" placeholder="Email" required>
-                        <button class="btn btn-primary w-100 py-2 fw-bold" style="background-color: #0d6efd;">Подключиться</button>
+                        <button class="btn btn-primary w-100 py-2 fw-bold">Подключиться</button>
                     </form>
                     <div class="mt-3 small"><a href="/login">Back to Sign In</a></div>
                 </div>
                 <div class="image-box"></div>
             </div>
         </div>
-    \`));
+    `));
 });
 
 app.post('/register', async (req, res) => {
@@ -126,12 +125,12 @@ app.use(checkStatus);
 
 app.get('/users', async (req, res) => {
     const result = await pool.query('SELECT * FROM users ORDER BY id ASC');
-    const rows = result.rows.map(u => \`
+    const rows = result.rows.map(u => `
         <tr class="align-middle">
             <td class="ps-4"><input type="checkbox" name="userIds" value="\${u.id}" class="form-check-input"></td>
             <td><b>\${u.name}</b><br><small class="text-muted">ID: \${u.id}</small></td>
             <td>\${u.email}</td>
-            <td>\${u.is_blocked ? '<span class="badge bg-danger">Blocked</span>' : '<span class="badge bg-success" style="background-color: #198754;">Active</span>'}</td>
+            <td>\${u.is_blocked ? '<span class="badge bg-danger">Blocked</span>' : '<span class="badge bg-success">Active</span>'}</td>
             <td>
                 <div class="small mb-1">\${u.last_login_time ? u.last_login_time.toLocaleString() : 'Never'}</div>
                 <div class="d-flex align-items-end gap-1" style="height: 18px;">
@@ -139,9 +138,9 @@ app.get('/users', async (req, res) => {
                 </div>
             </td>
         </tr>
-    \`).join('');
+    `).join('');
 
-    res.send(layout(\`
+    res.send(layout(`
         <div class="nav-header">
             <span class="text-primary fw-bold">THE APP</span>
             <div class="small">\${req.currentUser.email} | <a href="/logout" class="text-danger">Logout</a></div>
@@ -150,26 +149,16 @@ app.get('/users', async (req, res) => {
             <form action="/bulk" method="POST">
                 <div class="btn-toolbar-custom mb-3 d-flex justify-content-between align-items-center">
                     <div>
-                        <button name="action" value="block" class="btn btn-sm btn-outline-primary shadow-sm" style="border: 1px solid #dee2e6; color: #0d6efd;">
-                            <i class="bi bi-lock-fill"></i> Block
-                        </button>
-                        <button name="action" value="unblock" class="btn btn-sm btn-outline-secondary shadow-sm" style="border: 1px solid #dee2e6;">
-                            <i class="bi bi-unlock-fill"></i>
-                        </button>
-                        <button name="action" value="delete" class="btn btn-sm btn-danger text-white shadow-sm">
-                            <i class="bi bi-trash-fill"></i>
-                        </button>
-                    </div>
-                    <div class="d-flex gap-2 align-items-center">
-                         <span class="small text-muted">Filter</span>
-                         <input type="text" class="form-control form-control-sm" style="width: 150px; border: 1px solid #dee2e6;">
+                        <button name="action" value="block" class="btn btn-sm btn-outline-primary"><i class="bi bi-lock-fill"></i> Block</button>
+                        <button name="action" value="unblock" class="btn btn-sm btn-outline-secondary"><i class="bi bi-unlock-fill"></i></button>
+                        <button name="action" value="delete" class="btn btn-sm btn-danger text-white"><i class="bi bi-trash-fill"></i></button>
                     </div>
                 </div>
-                <div class="card shadow-sm border-0">
+                <div class="card shadow-sm">
                     <table class="table mb-0">
-                        <thead class="table-light small text-uppercase">
+                        <thead class="table-light small">
                             <tr>
-                                <th class="ps-4" style="width: 50px;"><input type="checkbox" class="form-check-input" onclick="toggleAll(this)"></th>
+                                <th class="ps-4"><input type="checkbox" class="form-check-input" onclick="toggleAll(this)"></th>
                                 <th>Name</th><th>Email &darr;</th><th>Status</th><th>Last Seen</th>
                             </tr>
                         </thead>
@@ -178,7 +167,7 @@ app.get('/users', async (req, res) => {
                 </div>
             </form>
         </div>
-    \`));
+    `));
 });
 
 app.post('/bulk', async (req, res) => {
