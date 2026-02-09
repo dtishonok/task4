@@ -49,7 +49,7 @@ const checkStatus = async (req, res, next) => {
         const user = result.rows[0];
         if (!user || user.is_blocked) {
             req.session = null;
-            return res.redirect('/login?error=Your account is blocked or deleted');
+            return res.redirect('/login?error=Invalid credentials or blocked');
         }
         req.currentUser = user;
         next();
@@ -57,25 +57,25 @@ const checkStatus = async (req, res, next) => {
 };
 
 app.get('/login', (req, res) => {
-    const errorMsg = req.query.error ? `<div class="alert alert-danger py-2 small mb-4 text-center">${req.query.error}</div>` : '';
-    res.send(layout(`
+    const errorMsg = req.query.error ? \`<div class="alert alert-danger py-2 small mb-4 text-center" style="background-color: #f8d7da; border: 1px solid #f5c2c7; color: #842029; border-radius: 4px;">\${req.query.error}</div>\` : '';
+    res.send(layout(\`
         <div class="login-page">
             <div class="main-wrapper">
-                <div class="login-content">
+                <div class="login-content text-center">
                     <h2 class="text-primary fw-bold mb-5" style="letter-spacing: 2px;">THE APP</h2>
                     <h4 class="fw-bold mb-4">Sign In</h4>
-                    ${errorMsg}
+                    \${errorMsg}
                     <form action="/login" method="POST">
                         <input type="email" name="email" class="form-control mb-3" placeholder="Email" required>
                         <input type="password" name="password" class="form-control mb-3" value="123" required>
-                        <button class="btn btn-primary w-100 py-2">Sign In</button>
+                        <button class="btn btn-primary w-100 py-2 fw-bold" style="background-color: #0d6efd;">Sign In</button>
                     </form>
-                    <div class="mt-3 small text-center"><a href="/register">Sign up</a></div>
+                    <div class="mt-3 small"><a href="/register" class="text-decoration-underline">Sign up</a></div>
                 </div>
                 <div class="image-box"></div>
             </div>
         </div>
-    `));
+    \`));
 });
 
 app.post('/login', async (req, res) => {
@@ -92,24 +92,31 @@ app.post('/login', async (req, res) => {
 });
 
 app.get('/register', (req, res) => {
-    res.send(layout(`
-        <div class="container py-5 text-center">
-            <form action="/register" method="POST" style="max-width: 400px; margin: auto;">
-                <h4 class="mb-4">Create Account</h4>
-                <input type="text" name="name" class="form-control mb-3" placeholder="Name" required>
-                <input type="email" name="email" class="form-control mb-3" placeholder="Email" required>
-                <button class="btn btn-success w-100">Sign Up</button>
-            </form>
+    res.send(layout(\`
+        <div class="login-page">
+            <div class="main-wrapper">
+                <div class="login-content text-center">
+                    <h2 class="text-primary fw-bold mb-5" style="letter-spacing: 2px;">THE APP</h2>
+                    <h4 class="fw-bold mb-4">Create Account</h4>
+                    <form action="/register" method="POST">
+                        <input type="text" name="name" class="form-control mb-3" placeholder="Name" required>
+                        <input type="email" name="email" class="form-control mb-3" placeholder="Email" required>
+                        <button class="btn btn-primary w-100 py-2 fw-bold" style="background-color: #0d6efd;">Подключиться</button>
+                    </form>
+                    <div class="mt-3 small"><a href="/login">Back to Sign In</a></div>
+                </div>
+                <div class="image-box"></div>
+            </div>
         </div>
-    `));
+    \`));
 });
 
 app.post('/register', async (req, res) => {
     try {
         await pool.query('INSERT INTO users (name, email) VALUES ($1, $2)', [req.body.name, req.body.email.toLowerCase()]);
-        res.redirect('/login?error=Success!');
+        res.redirect('/login?error=Success! Please Sign In');
     } catch (err) {
-        res.redirect('/register?error=Email already exists');
+        res.redirect('/login?error=Email already exists');
     }
 });
 
@@ -117,53 +124,59 @@ app.use(checkStatus);
 
 app.get('/users', async (req, res) => {
     const result = await pool.query('SELECT * FROM users ORDER BY id ASC');
-    const rows = result.rows.map(u => `
+    const rows = result.rows.map(u => \`
         <tr class="align-middle">
-            <td class="ps-4"><input type="checkbox" name="userIds" value="${u.id}" class="form-check-input"></td>
-            <td><b>${u.name}</b><br><small class="text-muted">ID: ${u.id}</small></td>
-            <td>${u.email}</td>
-            <td>${u.is_blocked ? '<span class="badge bg-danger">Blocked</span>' : '<span class="badge bg-success">Active</span>'}</td>
+            <td class="ps-4"><input type="checkbox" name="userIds" value="\${u.id}" class="form-check-input"></td>
+            <td><b>\${u.name}</b><br><small class="text-muted">ID: \${u.id}</small></td>
+            <td>\${u.email}</td>
+            <td>\${u.is_blocked ? '<span class="badge bg-danger">Blocked</span>' : '<span class="badge bg-success" style="background-color: #198754;">Active</span>'}</td>
             <td>
-                <div class="small mb-1">${u.last_login_time ? u.last_login_time.toLocaleString() : 'Never'}</div>
+                <div class="small mb-1">\${u.last_login_time ? u.last_login_time.toLocaleString() : 'Never'}</div>
                 <div class="d-flex align-items-end gap-1" style="height: 18px;">
                     <div class="sparkline-bar" style="height: 100%;"></div>
                 </div>
             </td>
         </tr>
-    `).join('');
+    \`).join('');
 
-    res.send(layout(`
+    res.send(layout(\`
         <div class="nav-header">
             <span class="text-primary fw-bold">THE APP</span>
-            <div class="small">${req.currentUser.email} | <a href="/logout" class="text-danger">Logout</a></div>
+            <div class="small">\${req.currentUser.email} | <a href="/logout" class="text-danger">Logout</a></div>
         </div>
         <div class="container" style="margin-top: 100px;">
             <form action="/bulk" method="POST">
-                <div class="btn-toolbar-custom mb-3 d-flex justify-content-between">
+                <div class="btn-toolbar-custom mb-3 d-flex justify-content-between align-items-center">
                     <div>
-                        <button name="action" value="block" class="btn btn-sm btn-primary">
+                        <button name="action" value="block" class="btn btn-sm btn-outline-primary shadow-sm" style="border: 1px solid #dee2e6; color: #0d6efd;">
                             <i class="bi bi-lock-fill"></i> Block
                         </button>
-                        <button name="action" value="unblock" class="btn btn-sm btn-outline-secondary">
+                        <button name="action" value="unblock" class="btn btn-sm btn-outline-secondary shadow-sm" style="border: 1px solid #dee2e6;">
                             <i class="bi bi-unlock-fill"></i>
                         </button>
-                        <button name="action" value="delete" class="btn btn-sm btn-danger text-white">
+                        <button name="action" value="delete" class="btn btn-sm btn-danger text-white shadow-sm">
                             <i class="bi bi-trash-fill"></i>
                         </button>
                     </div>
+                    <div class="d-flex gap-2 align-items-center">
+                         <span class="small text-muted">Filter</span>
+                         <input type="text" class="form-control form-control-sm" style="width: 150px; border: 1px solid #dee2e6;">
+                    </div>
                 </div>
-                <table class="table border">
-                    <thead class="table-light">
-                        <tr>
-                            <th class="ps-4"><input type="checkbox" class="form-check-input" onclick="toggleAll(this)"></th>
-                            <th>NAME</th><th>EMAIL</th><th>STATUS</th><th>LAST SEEN</th>
-                        </tr>
-                    </thead>
-                    <tbody>${rows}</tbody>
-                </table>
+                <div class="card shadow-sm border-0">
+                    <table class="table mb-0">
+                        <thead class="table-light small text-uppercase">
+                            <tr>
+                                <th class="ps-4" style="width: 50px;"><input type="checkbox" class="form-check-input" onclick="toggleAll(this)"></th>
+                                <th>Name</th><th>Email &darr;</th><th>Status</th><th>Last Seen</th>
+                            </tr>
+                        </thead>
+                        <tbody>\${rows}</tbody>
+                    </table>
+                </div>
             </form>
         </div>
-    `));
+    \`));
 });
 
 app.post('/bulk', async (req, res) => {
@@ -172,12 +185,12 @@ app.post('/bulk', async (req, res) => {
     if (ids.length > 0) {
         if (action === 'block') {
             await pool.query('UPDATE users SET is_blocked = true WHERE id = ANY($1)', [ids]);
-            if (ids.includes(req.session.userId.toString())) { req.session = null; return res.redirect('/login'); }
+            if (ids.includes(req.session.userId.toString())) { req.session = null; return res.redirect('/login?error=Invalid credentials or blocked'); }
         } else if (action === 'unblock') {
             await pool.query('UPDATE users SET is_blocked = false WHERE id = ANY($1)', [ids]);
         } else if (action === 'delete') {
             await pool.query('DELETE FROM users WHERE id = ANY($1)', [ids]);
-            if (ids.includes(req.session.userId.toString())) { req.session = null; return res.redirect('/login'); }
+            if (ids.includes(req.session.userId.toString())) { req.session = null; return res.redirect('/login?error=Invalid credentials or blocked'); }
         }
     }
     res.redirect('/users');
@@ -186,4 +199,5 @@ app.post('/bulk', async (req, res) => {
 app.get('/logout', (req, res) => { req.session = null; res.redirect('/login'); });
 
 module.exports = app;
+
 
