@@ -57,25 +57,27 @@ const checkStatus = async (req, res, next) => {
 };
 
 app.get('/login', (req, res) => {
-    const errorMsg = req.query.error ? \`<div class="alert alert-danger py-2 small mb-4 text-center" style="background-color: #f8d7da; border: 1px solid #f5c2c7; color: #842029; border-radius: 4px;">\${req.query.error}</div>\` : '';
-    res.send(layout(\`
+    const errorMsg = req.query.error ? `<div class="alert alert-danger py-2 small mb-4 text-center" style="background-color: #f8d7da; border: 1px solid #f5c2c7; color: #842029; border-radius: 4px;">${req.query.error}</div>` : '';
+    res.send(layout(`
         <div class="login-page">
             <div class="main-wrapper">
                 <div class="login-content text-center">
                     <h2 class="text-primary fw-bold mb-5" style="letter-spacing: 2px;">THE APP</h2>
                     <h4 class="fw-bold mb-4">Sign In</h4>
-                    \${errorMsg}
+                    ${errorMsg}
                     <form action="/login" method="POST">
                         <input type="email" name="email" class="form-control mb-3" placeholder="Email" required>
                         <input type="password" name="password" class="form-control mb-3" value="123" required>
                         <button class="btn btn-primary w-100 py-2 fw-bold" style="background-color: #0d6efd;">Sign In</button>
                     </form>
-                    <div class="mt-3 small"><a href="/register" class="text-decoration-underline">Sign up</a></div>
+                    <div class="mt-4 small text-muted">
+                        New here? <a href="/register" class="text-primary fw-bold text-decoration-none">Sign up</a>
+                    </div>
                 </div>
                 <div class="image-box"></div>
             </div>
         </div>
-    \`));
+    `));
 });
 
 app.post('/login', async (req, res) => {
@@ -199,5 +201,6 @@ app.post('/bulk', async (req, res) => {
 app.get('/logout', (req, res) => { req.session = null; res.redirect('/login'); });
 
 module.exports = app;
+
 
 
