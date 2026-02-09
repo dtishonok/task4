@@ -212,7 +212,5 @@ app.post('/bulk', async (req, res) => {
 
 app.get('/logout', (req, res) => { req.session = null; res.redirect('/login'); });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log('Server running on port ' + PORT));
-
 module.exports = app;
+
