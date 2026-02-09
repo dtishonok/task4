@@ -17,13 +17,13 @@ const layout = (body, user = null) => `
     <style>
         body { background-color: #ffffff; font-family: -apple-system, sans-serif; height: 100vh; margin: 0; overflow: hidden; }
         .login-container { display: flex; height: 100vh; width: 100%; align-items: center; }
-        .login-form-side { flex: 0 0 55%; display: flex; align-items: center; justify-content: center; padding: 40px; }
+        .login-form-side { flex: 0 0 50%; display: flex; align-items: center; justify-content: center; padding: 40px; }
         .login-image-side { 
-            flex: 0 0 45%; 
+            flex: 0 0 50%; 
             display: flex; 
             align-items: center; 
-            justify-content: center; 
-            padding: 40px 80px 40px 20px; 
+            justify-content: flex-start; /* Сдвигаем контент влево внутри блока */
+            padding: 40px 100px 40px 40px; /* Увеличили правый отступ до 100px, чтобы отодвинуть от края */
             height: 100vh;
         }
         .image-box {
@@ -37,7 +37,6 @@ const layout = (body, user = null) => `
         }
         @media (max-width: 992px) { .login-image-side { display: none; } .login-form-side { flex: 0 0 100%; } }
         .btn-toolbar-custom .btn { border: 1px solid #dee2e6; background: #fff; color: #0d6efd; padding: 4px 12px; margin-right: 4px; border-radius: 4px; }
-        .btn-toolbar-custom .btn-danger { color: #dc3545; }
         .form-check-input:checked { background-color: #0d6efd; border-color: #0d6efd; }
         .nav-header { border-bottom: 1px solid #eee; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; }
         .user-name { font-weight: 500; color: #000; display: block; }
@@ -197,5 +196,3 @@ app.post('/bulk', async (req, res) => {
 app.get('/logout', (req, res) => { req.session = null; res.redirect('/login'); });
 
 module.exports = app;
-
-
