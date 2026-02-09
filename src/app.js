@@ -51,31 +51,55 @@ const checkStatus = async (req, res, next) => {
     } catch { res.redirect('/login'); }
 };
 
-app.get('/login', (req, res) => {
-    const errorMsg = req.query.error ? `<div class="alert alert-danger py-2 small mb-4 text-center">${req.query.error}</div>` : '';
-    res.send(layout(`
-        <div class="main-wrapper">
-            <div class="login-content">
-                <h2 class="text-primary fw-bold mb-5" style="letter-spacing: 2px;">THE APP</h2>
-                <p class="text-muted mb-1 small">Start your journey</p>
-                <h4 class="fw-bold mb-4">Sign In to The App</h4>
-                ${errorMsg}
-                <form action="/login" method="POST">
-                    <div class="mb-3">
-                        <label class="small text-muted mb-1">E-mail</label>
-                        <input type="email" name="email" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="small text-muted mb-1">Password</label>
-                        <input type="password" name="password" class="form-control" value="123" required>
-                    </div>
-                    <button class="btn btn-primary w-100 py-2 mb-4 fw-bold">Sign In</button>
-                </form>
-                <div class="small text-center">
-                    <span>New here? <a href="/register" class="text-primary text-decoration-none">Sign up</a></span>
+app.get('/users', async (req, res) => {
+    const result = await pool.query('SELECT * FROM users ORDER BY id ASC');
+    const rows = result.rows.map(u => `
+        <tr class="align-middle">
+            <td class="ps-4"><input type="checkbox" name="userIds" value="${u.id}" class="form-check-input"></td>
+            <td><b>${u.name}</b><br><small class="text-muted">ID: ${u.id}</small></td>
+            <td>${u.email}</td>
+            <td>${u.is_blocked ? '<span class="badge bg-danger">Blocked</span>' : '<span class="badge bg-success">Active</span>'}</td>
+            <td>
+                <div class="small mb-1">${u.last_login_time ? u.last_login_time.toLocaleString() : 'Never'}</div>
+                <div class="d-flex align-items-end gap-1" style="height: 20px;">
+                    <div style="width: 4px; height: 40%; background: #0d6efd; opacity: 0.3; border-radius: 1px;"></div>
+                    <div style="width: 4px; height: 70%; background: #0d6efd; opacity: 0.5; border-radius: 1px;"></div>
+                    <div style="width: 4px; height: 30%; background: #0d6efd; opacity: 0.3; border-radius: 1px;"></div>
+                    <div style="width: 4px; height: 90%; background: #0d6efd; opacity: 0.8; border-radius: 1px;"></div>
+                    <div style="width: 4px; height: 50%; background: #0d6efd; opacity: 0.4; border-radius: 1px;"></div>
+                    <div style="width: 4px; height: 100%; background: #0d6efd; border-radius: 1px;"></div>
                 </div>
-            </div>
-            <div class="image-box"></div>
+            </td>
+        </tr>
+    `).join('');
+
+    res.send(layout(`
+        <div class="nav-header">
+            <span class="text-primary fw-bold">THE APP</span>
+            <div class="small"><b>${req.currentUser.email}</b> | <a href="/logout" class="text-danger ms-2 text-decoration-none">Logout</a></div>
+        </div>
+        <div class="container" style="margin-top: 100px;">
+            <form action="/bulk" method="POST">
+                <div class="btn-toolbar-custom mb-3">
+                    <button name="action" value="block" class="btn btn-sm btn-outline-primary"><i class="bi bi-lock-fill"></i> Block</button>
+                    <button name="action" value="unblock" class="btn btn-sm btn-outline-secondary"><i class="bi bi-unlock-fill"></i></button>
+                    <button name="action" value="delete" class="btn btn-sm btn-danger text-white"><i class="bi bi-trash-fill"></i></button>
+                </div>
+                <div class="table-responsive shadow-sm" style="border-radius: 8px;">
+                    <table class="table table-hover border mb-0 bg-white">
+                        <thead class="table-light small text-muted">
+                            <tr>
+                                <th class="ps-4" style="width:40px;"><input type="checkbox" class="form-check-input" onclick="toggleAll(this)"></th>
+                                <th>NAME</th>
+                                <th>EMAIL <i class="bi bi-arrow-down"></i></th>
+                                <th>STATUS</th>
+                                <th>LAST SEEN</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+            </form>
         </div>
     `));
 });
@@ -170,4 +194,5 @@ app.post('/bulk', async (req, res) => {
 app.get('/logout', (req, res) => { req.session = null; res.redirect('/login'); });
 
 module.exports = app;
+
 
