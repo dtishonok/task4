@@ -11,7 +11,6 @@ const pool = new Pool({
 const fixDatabase = async () => {
     try {
         await pool.query('DROP TABLE IF EXISTS users CASCADE;');
-        
         const createTableQuery = `
             CREATE TABLE users (
                 id SERIAL PRIMARY KEY,
