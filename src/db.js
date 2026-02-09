@@ -8,10 +8,8 @@ const pool = new Pool({
     }
 });
 
-// Функция, которая автоматически пересоздаст правильную таблицу
 const fixDatabase = async () => {
     try {
-        // Сначала удаляем старую таблицу, чтобы создать новую с правильными полями
         await pool.query('DROP TABLE IF EXISTS users CASCADE;');
         
         const createTableQuery = `
@@ -31,7 +29,6 @@ const fixDatabase = async () => {
     }
 };
 
-// Проверка подключения и запуск исправления
 pool.query('SELECT NOW()', (err, res) => {
     if (err) {
         console.error('Ошибка подключения к базе данных:', err.message);
@@ -42,6 +39,7 @@ pool.query('SELECT NOW()', (err, res) => {
 });
 
 module.exports = pool;
+
 
 
 
