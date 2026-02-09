@@ -23,22 +23,22 @@ const fixDatabase = async () => {
             );
         `;
         await pool.query(createTableQuery);
-        console.log('Таблица users успешно пересоздана под app.js! ✅');
+        console.log('Done ✅');
     } catch (err) {
-        console.error('Ошибка при обновлении таблицы:', err.message);
+        console.error(err.message);
     }
 };
 
-pool.query('SELECT NOW()', (err, res) => {
+pool.query('SELECT NOW()', (err) => {
     if (err) {
-        console.error('Ошибка подключения к базе данных:', err.message);
+        console.error(err.message);
     } else {
-        console.log('База подключена. Начинаю обновление структуры...');
         fixDatabase();
     }
 });
 
 module.exports = pool;
+
 
 
 
