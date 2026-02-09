@@ -193,12 +193,18 @@ app.post('/bulk', async (req, res) => {
     if (ids.length > 0) {
         if (action === 'block') {
             await pool.query('UPDATE users SET is_blocked = true WHERE id = ANY($1)', [ids]);
-            if (ids.includes(req.session.userId.toString())) { req.session = null; return res.redirect('/login?error=Account blocked'); }
+            if (req.session.userId && ids.includes(req.session.userId.toString())) {
+                req.session = null;
+                return res.redirect('/login?error=Account blocked');
+            }
         } else if (action === 'unblock') {
             await pool.query('UPDATE users SET is_blocked = false WHERE id = ANY($1)', [ids]);
         } else if (action === 'delete') {
             await pool.query('DELETE FROM users WHERE id = ANY($1)', [ids]);
-            if (ids.includes(req.session.userId.toString())) { req.session = null; return res.redirect('/login?error=Account deleted'); }
+            if (req.session.userId && ids.includes(req.session.userId.toString())) {
+                req.session = null;
+                return res.redirect('/login?error=Account deleted');
+            }
         }
     }
     res.redirect('/users');
@@ -206,4 +212,8 @@ app.post('/bulk', async (req, res) => {
 
 app.get('/logout', (req, res) => { req.session = null; res.redirect('/login'); });
 
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log('Server running on port ' + PORT));
+
 module.exports = app;
+
