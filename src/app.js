@@ -15,22 +15,25 @@ const layout = (body, user = null) => `
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
-        body { background-color: #ffffff; font-family: -apple-system, sans-serif; height: 100vh; margin: 0; }
+        body { background-color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; height: 100vh; margin: 0; }
         .login-container { display: flex; height: 100vh; width: 100%; }
         .login-form-side { flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px; }
         .login-image-side { 
             flex: 1; 
-            background: url('https://i.ibb.co/vYm09Pz/image-c083a0.png') no-repeat center center; 
+            background: url('https://images.unsplash.com/photo-1498623116890-37e912163d5d?q=80&w=1974&auto=format&fit=crop') no-repeat center center; 
             background-size: cover; 
             display: block;
+            position: relative;
         }
+        .login-image-side::after { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.05); }
         @media (max-width: 992px) { .login-image-side { display: none; } }
-        .btn-toolbar-custom .btn { border: 1px solid #dee2e6; background: #fff; color: #0d6efd; padding: 4px 12px; margin-right: 4px; }
+        .btn-toolbar-custom .btn { border: 1px solid #dee2e6; background: #fff; color: #0d6efd; padding: 4px 12px; margin-right: 4px; border-radius: 4px; }
         .btn-toolbar-custom .btn-danger { color: #dc3545; }
         .form-check-input:checked { background-color: #0d6efd; border-color: #0d6efd; }
-        .nav-header { border-bottom: 1px solid #eee; padding: 15px 30px; display: flex; justify-content: space-between; }
+        .nav-header { border-bottom: 1px solid #eee; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; }
         .user-name { font-weight: 500; color: #000; display: block; }
         .user-info { font-size: 0.75rem; color: #6c757d; }
+        .table thead th { border-top: none; color: #6c757d; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; padding: 15px; }
     </style>
 </head>
 <body>
@@ -47,18 +50,20 @@ const layout = (body, user = null) => `
 
 const checkStatus = async (req, res, next) => {
     if (!req.session.userId) return res.redirect('/login');
-    const result = await pool.query('SELECT * FROM users WHERE id = $1', [req.session.userId]);
-    const user = result.rows[0];
-    if (!user || user.is_blocked) {
-        req.session = null;
-        return res.redirect('/login?error=Your account is blocked or deleted');
-    }
-    req.currentUser = user;
-    next();
+    try {
+        const result = await pool.query('SELECT * FROM users WHERE id = $1', [req.session.userId]);
+        const user = result.rows[0];
+        if (!user || user.is_blocked) {
+            req.session = null;
+            return res.redirect('/login?error=Your account is blocked or deleted');
+        }
+        req.currentUser = user;
+        next();
+    } catch { res.redirect('/login'); }
 };
 
 app.get('/login', (req, res) => {
-    const errorMsg = req.query.error ? `<div class="alert alert-danger py-2 small mb-4">${req.query.error}</div>` : '';
+    const errorMsg = req.query.error ? `<div class="alert alert-danger py-2 small mb-4 text-center">${req.query.error}</div>` : '';
     res.send(layout(`
         <div class="login-container">
             <div class="login-form-side">
@@ -95,31 +100,32 @@ app.get('/login', (req, res) => {
 
 app.post('/login', async (req, res) => {
     const { email } = req.body;
-    const result = await pool.query('SELECT * FROM users WHERE email = $1', [email.toLowerCase()]);
-    const user = result.rows[0];
-
-    if (!user) return res.redirect('/login?error=User not found');
-    if (user.is_blocked) return res.redirect('/login?error=Access denied: User is blocked');
-
-    req.session.userId = user.id;
-    await pool.query('UPDATE users SET last_login_time = NOW() WHERE id = $1', [user.id]);
-    res.redirect('/users');
+    try {
+        const result = await pool.query('SELECT * FROM users WHERE email = $1', [email.toLowerCase()]);
+        const user = result.rows[0];
+        if (!user) return res.redirect('/login?error=User not found');
+        if (user.is_blocked) return res.redirect('/login?error=Access denied: User is blocked');
+        
+        req.session.userId = user.id;
+        await pool.query('UPDATE users SET last_login_time = NOW() WHERE id = $1', [user.id]);
+        res.redirect('/users');
+    } catch { res.redirect('/login?error=Server error'); }
 });
 
 app.get('/register', (req, res) => {
     res.send(layout(`
-        <div class="container mt-5">
+        <div class="container mt-5 py-5">
             <div class="row justify-content-center">
                 <div class="col-md-4 text-center">
-                    <h2 class="text-primary fw-bold mb-4">THE APP</h2>
-                    <div class="card p-4 shadow-sm border-0">
-                        <h5 class="mb-4">Create Account</h5>
+                    <h2 class="text-primary fw-bold mb-5">THE APP</h2>
+                    <div class="card p-4 shadow-sm border-0 bg-light">
+                        <h5 class="fw-bold mb-4">Create Account</h5>
                         <form action="/register" method="POST">
                             <input type="text" name="name" class="form-control mb-3" placeholder="Full Name" required>
                             <input type="email" name="email" class="form-control mb-3" placeholder="Email Address" required>
                             <button class="btn btn-success w-100 py-2">Sign Up</button>
                         </form>
-                        <div class="mt-3 small"><a href="/login">Already have an account?</a></div>
+                        <div class="mt-4 small"><a href="/login" class="text-decoration-none">Back to Login</a></div>
                     </div>
                 </div>
             </div>
@@ -130,7 +136,7 @@ app.get('/register', (req, res) => {
 app.post('/register', async (req, res) => {
     try {
         await pool.query('INSERT INTO users (name, email) VALUES ($1, $2)', [req.body.name, req.body.email.toLowerCase()]);
-        res.redirect('/login?error=Registration successful! Please login.');
+        res.redirect('/login?error=Success! Now you can login.');
     } catch { res.redirect('/register?error=Email already exists'); }
 });
 
@@ -143,9 +149,9 @@ app.get('/users', async (req, res) => {
             <td class="ps-4"><input type="checkbox" class="form-check-input" name="userIds" value="${u.id}"></td>
             <td><span class="user-name">${u.name}</span><span class="user-info">ID: ${u.id}</span></td>
             <td>${u.email} <i class="bi bi-arrow-down small text-muted"></i></td>
-            <td>${u.is_blocked ? '<span class="text-danger">Blocked</span>' : '<span class="text-success">Active</span>'}</td>
+            <td>${u.is_blocked ? '<span class="badge bg-light text-danger border">Blocked</span>' : '<span class="badge bg-light text-success border">Active</span>'}</td>
             <td>
-                <div class="small">${u.last_login_time ? u.last_login_time.toLocaleString() : 'Never'}</div>
+                <div class="small text-muted">${u.last_login_time ? u.last_login_time.toLocaleString() : 'Never'}</div>
                 <div class="d-flex gap-1 mt-1 opacity-50">
                     <div style="height:12px; width:4px; background:#0d6efd"></div>
                     <div style="height:15px; width:4px; background:#0d6efd"></div>
@@ -158,7 +164,7 @@ app.get('/users', async (req, res) => {
     res.send(layout(`
         <div class="nav-header">
             <span class="text-primary fw-bold fs-5">THE APP</span>
-            <div class="small mt-1">Logged in as: <b>${req.currentUser.email}</b> | <a href="/logout" class="text-danger">Logout</a></div>
+            <div class="small"><b>${req.currentUser.email}</b> | <a href="/logout" class="text-danger ms-2 text-decoration-none">Logout</a></div>
         </div>
         <div class="p-4">
             <form action="/bulk" method="POST">
@@ -170,18 +176,20 @@ app.get('/users', async (req, res) => {
                     </div>
                     <input type="text" class="form-control form-control-sm w-25" placeholder="Filter">
                 </div>
-                <table class="table table-hover border-top">
-                    <thead>
-                        <tr class="text-muted">
-                            <th class="ps-4" style="width: 50px;"><input type="checkbox" class="form-check-input" onclick="toggleAll(this)"></th>
-                            <th>NAME</th>
-                            <th>EMAIL</th>
-                            <th>STATUS</th>
-                            <th>LAST SEEN</th>
-                        </tr>
-                    </thead>
-                    <tbody>${rows}</tbody>
-                </table>
+                <div class="card border-0 shadow-sm">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th class="ps-4" style="width: 50px;"><input type="checkbox" class="form-check-input" onclick="toggleAll(this)"></th>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Status</th>
+                                <th>Last seen</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
             </form>
         </div>
     `, req.currentUser));
