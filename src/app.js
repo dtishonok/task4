@@ -12,7 +12,6 @@ app.use(session({
     maxAge: 24 * 60 * 60 * 1000
 }));
 
-// Функция оформления (Layout) с иконками и стилями как в ТЗ
 const layout = (body, user = null) => `
 <!DOCTYPE html>
 <html lang="en">
@@ -45,7 +44,6 @@ const layout = (body, user = null) => `
 </html>
 `;
 
-// Проверка статуса пользователя
 const checkStatus = async (req, res, next) => {
     if (!req.session.userId) return res.redirect('/login');
     try {
@@ -62,7 +60,6 @@ const checkStatus = async (req, res, next) => {
     }
 };
 
-// Роуты авторизации
 app.get('/login', (req, res) => {
     res.send(layout(`
         <div class="row justify-content-center mt-5">
@@ -120,7 +117,6 @@ app.post('/register', async (req, res) => {
 
 app.use(checkStatus);
 
-// Главная страница с таблицей (как в ТЗ)
 app.get('/users', async (req, res) => {
     const result = await pool.query('SELECT * FROM users ORDER BY id ASC');
     const rows = result.rows.map(u => `
@@ -202,4 +198,5 @@ app.get('/logout', (req, res) => {
 module.exports = app;
 
 module.exports = app;
+
 
