@@ -8,11 +8,10 @@ const pool = new Pool({
     }
 });
 
-const fixDatabase = async () => {
+const initDatabase = async () => {
     try {
-        await pool.query('DROP TABLE IF EXISTS users CASCADE;');
         const createTableQuery = `
-            CREATE TABLE users (
+            CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
                 name VARCHAR(100),
                 email VARCHAR(100) UNIQUE NOT NULL,
@@ -22,7 +21,7 @@ const fixDatabase = async () => {
             );
         `;
         await pool.query(createTableQuery);
-        console.log('Done ✅');
+        console.log('Database ready ✅');
     } catch (err) {
         console.error(err.message);
     }
@@ -32,11 +31,12 @@ pool.query('SELECT NOW()', (err) => {
     if (err) {
         console.error(err.message);
     } else {
-        fixDatabase();
+        initDatabase();
     }
 });
 
 module.exports = pool;
+
 
 
 
