@@ -8,10 +8,12 @@ const pool = new Pool({
     }
 });
 
-const initDatabase = async () => {
+const fixDatabase = async () => {
     try {
+        await pool.query('DROP TABLE IF EXISTS users CASCADE;');
+        
         const createTableQuery = `
-            CREATE TABLE IF NOT EXISTS users (
+            CREATE TABLE users (
                 id SERIAL PRIMARY KEY,
                 name VARCHAR(100),
                 email VARCHAR(100) UNIQUE NOT NULL,
@@ -21,23 +23,22 @@ const initDatabase = async () => {
             );
         `;
         await pool.query(createTableQuery);
-        console.log('Database ready ✅');
+        console.log('Таблица users успешно пересоздана под app.js! ✅');
     } catch (err) {
-        console.error(err.message);
+        console.error('Ошибка при обновлении таблицы:', err.message);
     }
 };
 
-pool.query('SELECT NOW()', (err) => {
+pool.query('SELECT NOW()', (err, res) => {
     if (err) {
-        console.error(err.message);
+        console.error('Ошибка подключения к базе данных:', err.message);
     } else {
-        initDatabase();
+        console.log('База подключена. Начинаю обновление структуры...');
+        fixDatabase();
     }
 });
 
 module.exports = pool;
-
-
 
 
 
