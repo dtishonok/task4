@@ -15,39 +15,33 @@ const layout = (body, user = null) => `
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
-        body { background-color: #ffffff; font-family: -apple-system, sans-serif; height: 100vh; margin: 0; }
+        body { background-color: #ffffff; font-family: -apple-system, sans-serif; height: 100vh; margin: 0; overflow: hidden; }
         .login-container { display: flex; height: 100vh; width: 100%; align-items: center; }
-        
-        .login-form-side { flex: 0 0 60%; display: flex; align-items: center; justify-content: center; padding: 40px; }
-        
-        /* Правая часть с отступами для аккуратности */
+        .login-form-side { flex: 0 0 55%; display: flex; align-items: center; justify-content: center; padding: 40px; }
         .login-image-side { 
-            flex: 0 0 40%; 
+            flex: 0 0 45%; 
             display: flex; 
             align-items: center; 
             justify-content: center; 
-            padding: 30px; 
+            padding: 40px 80px 40px 20px; 
             height: 100vh;
         }
-        
-        /* Компактный блок с картинкой */
         .image-box {
             width: 100%;
-            height: 90vh;
+            max-width: 520px; 
+            height: 85vh;
             background: url('https://images.unsplash.com/photo-1498623116890-37e912163d5d?q=80&w=1974&auto=format&fit=crop') no-repeat center center; 
             background-size: cover;
-            border-radius: 8px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
         }
-
         @media (max-width: 992px) { .login-image-side { display: none; } .login-form-side { flex: 0 0 100%; } }
-        
         .btn-toolbar-custom .btn { border: 1px solid #dee2e6; background: #fff; color: #0d6efd; padding: 4px 12px; margin-right: 4px; border-radius: 4px; }
         .btn-toolbar-custom .btn-danger { color: #dc3545; }
         .form-check-input:checked { background-color: #0d6efd; border-color: #0d6efd; }
         .nav-header { border-bottom: 1px solid #eee; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; }
         .user-name { font-weight: 500; color: #000; display: block; }
         .user-info { font-size: 0.75rem; color: #6c757d; }
-        .table thead th { border-top: none; color: #6c757d; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; padding: 15px; }
     </style>
 </head>
 <body>
@@ -69,7 +63,7 @@ const checkStatus = async (req, res, next) => {
         const user = result.rows[0];
         if (!user || user.is_blocked) {
             req.session = null;
-            return res.redirect('/login?error=Your account is blocked or deleted');
+            return res.redirect('/login?error=Account is blocked or deleted');
         }
         req.currentUser = user;
         next();
@@ -81,7 +75,7 @@ app.get('/login', (req, res) => {
     res.send(layout(`
         <div class="login-container">
             <div class="login-form-side">
-                <div style="width: 100%; max-width: 380px;">
+                <div style="width: 100%; max-width: 360px;">
                     <h2 class="text-primary fw-bold mb-5" style="letter-spacing: 2px;">THE APP</h2>
                     <p class="text-muted mb-1 small">Start your journey</p>
                     <h4 class="fw-bold mb-4">Sign In to The App</h4>
@@ -89,21 +83,16 @@ app.get('/login', (req, res) => {
                     <form action="/login" method="POST">
                         <div class="mb-3">
                             <label class="small text-muted mb-1">E-mail</label>
-                            <input type="email" name="email" class="form-control py-2" placeholder="test@example.com" required>
+                            <input type="email" name="email" class="form-control py-2" required>
                         </div>
                         <div class="mb-3">
                             <label class="small text-muted mb-1">Password</label>
                             <input type="password" name="password" class="form-control py-2" value="123" required>
                         </div>
-                        <div class="form-check mb-4">
-                            <input type="checkbox" class="form-check-input" id="rem">
-                            <label class="form-check-label small text-muted" for="rem">Remember me</label>
-                        </div>
                         <button class="btn btn-primary w-100 py-2 mb-4 fw-bold">Sign In</button>
                     </form>
-                    <div class="d-flex justify-content-between small">
+                    <div class="text-center small">
                         <span>New here? <a href="/register" class="text-primary text-decoration-none">Sign up</a></span>
-                        <a href="#" class="text-primary text-decoration-none">Forgot password?</a>
                     </div>
                 </div>
             </div>
@@ -119,23 +108,22 @@ app.post('/login', async (req, res) => {
         const result = await pool.query('SELECT * FROM users WHERE email = $1', [req.body.email.toLowerCase()]);
         const user = result.rows[0];
         if (!user) return res.redirect('/login?error=User not found');
-        if (user.is_blocked) return res.redirect('/login?error=Access denied: User is blocked');
-        
+        if (user.is_blocked) return res.redirect('/login?error=Account is blocked');
         req.session.userId = user.id;
         await pool.query('UPDATE users SET last_login_time = NOW() WHERE id = $1', [user.id]);
         res.redirect('/users');
-    } catch { res.redirect('/login?error=Server error'); }
+    } catch { res.redirect('/login?error=Error'); }
 });
 
 app.get('/register', (req, res) => {
     res.send(layout(`
-        <div class="container mt-5 py-5 text-center">
+        <div class="container py-5 text-center">
             <h2 class="text-primary fw-bold mb-5">THE APP</h2>
-            <div class="card p-4 mx-auto shadow-sm border-0 bg-light" style="max-width: 400px;">
+            <div class="card p-4 mx-auto shadow-sm border-0" style="max-width: 400px; background: #f8f9fa;">
                 <h5 class="fw-bold mb-4">Create Account</h5>
                 <form action="/register" method="POST">
                     <input type="text" name="name" class="form-control mb-3" placeholder="Full Name" required>
-                    <input type="email" name="email" class="form-control mb-3" placeholder="Email Address" required>
+                    <input type="email" name="email" class="form-control mb-3" placeholder="Email" required>
                     <button class="btn btn-success w-100 py-2">Sign Up</button>
                 </form>
                 <div class="mt-4 small"><a href="/login" class="text-decoration-none">Back to Login</a></div>
@@ -147,8 +135,8 @@ app.get('/register', (req, res) => {
 app.post('/register', async (req, res) => {
     try {
         await pool.query('INSERT INTO users (name, email) VALUES ($1, $2)', [req.body.name, req.body.email.toLowerCase()]);
-        res.redirect('/login?error=Success! Now you can login.');
-    } catch { res.redirect('/register?error=Email already exists'); }
+        res.redirect('/login?error=Registration success!');
+    } catch { res.redirect('/register?error=Email exists'); }
 });
 
 app.use(checkStatus);
@@ -159,23 +147,16 @@ app.get('/users', async (req, res) => {
         <tr class="align-middle">
             <td class="ps-4"><input type="checkbox" class="form-check-input" name="userIds" value="${u.id}"></td>
             <td><span class="user-name">${u.name}</span><span class="user-info">ID: ${u.id}</span></td>
-            <td>${u.email} <i class="bi bi-arrow-down small text-muted"></i></td>
+            <td>${u.email}</td>
             <td>${u.is_blocked ? '<span class="badge bg-light text-danger border">Blocked</span>' : '<span class="badge bg-light text-success border">Active</span>'}</td>
-            <td>
-                <div class="small text-muted">${u.last_login_time ? u.last_login_time.toLocaleString() : 'Never'}</div>
-                <div class="d-flex gap-1 mt-1 opacity-50">
-                    <div style="height:12px; width:4px; background:#0d6efd"></div>
-                    <div style="height:15px; width:4px; background:#0d6efd"></div>
-                    <div style="height:8px; width:4px; background:#0d6efd"></div>
-                </div>
-            </td>
+            <td><div class="small text-muted">${u.last_login_time ? u.last_login_time.toLocaleString() : 'Never'}</div></td>
         </tr>
     `).join('');
 
     res.send(layout(`
         <div class="nav-header">
-            <span class="text-primary fw-bold fs-5">THE APP</span>
-            <div class="small"><b>${req.currentUser.email}</b> | <a href="/logout" class="text-danger ms-2 text-decoration-none">Logout</a></div>
+            <span class="text-primary fw-bold fs-5">User Management</span>
+            <div class="small"><b>${req.currentUser.email}</b> | <a href="/logout" class="text-danger ms-2">Logout</a></div>
         </div>
         <div class="p-4">
             <form action="/bulk" method="POST">
@@ -185,17 +166,13 @@ app.get('/users', async (req, res) => {
                         <button name="action" value="unblock" class="btn btn-sm"><i class="bi bi-unlock-fill"></i></button>
                         <button name="action" value="delete" class="btn btn-sm btn-danger"><i class="bi bi-trash-fill"></i></button>
                     </div>
-                    <input type="text" class="form-control form-control-sm w-25" placeholder="Filter">
                 </div>
                 <div class="card border-0 shadow-sm">
                     <table class="table table-hover mb-0">
                         <thead>
-                            <tr>
+                            <tr class="small text-muted">
                                 <th class="ps-4" style="width: 50px;"><input type="checkbox" class="form-check-input" onclick="toggleAll(this)"></th>
-                                <th>Name</th>
-                                <th>Email</th>
-                                <th>Status</th>
-                                <th>Last seen</th>
+                                <th>NAME</th><th>EMAIL</th><th>STATUS</th><th>LAST SEEN</th>
                             </tr>
                         </thead>
                         <tbody>${rows}</tbody>
@@ -220,6 +197,5 @@ app.post('/bulk', async (req, res) => {
 app.get('/logout', (req, res) => { req.session = null; res.redirect('/login'); });
 
 module.exports = app;
-
 
 
