@@ -14,32 +14,26 @@ app.use(session({
 
 const layout = (body, user = null) => `
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-    <title>User Management System</title>
     <style>
-        .table-hover tbody tr:hover { background-color: #f8f9fa; }
-        .btn-toolbar .btn { margin-right: 5px; }
+        body { background-color: #ffffff; font-family: sans-serif; color: #333; }
+        .toolbar { border: 1px solid #dee2e6; border-radius: 4px; padding: 10px; margin-bottom: 0; background: #fff; }
+        .btn-custom { border: 1px solid #0d6efd; color: #0d6efd; background: #fff; padding: 2px 12px; font-size: 14px; }
+        .btn-custom:hover { background: #0d6efd; color: #fff; }
+        .btn-danger-custom { border: 1px solid #dc3545; color: #dc3545; background: #fff; padding: 2px 12px; }
+        .table thead th { border-bottom: 2px solid #dee2e6; color: #000; font-weight: bold; font-size: 14px; }
+        .user-id { color: #6c757d; font-size: 12px; display: block; }
+        .user-name { font-weight: 500; color: #000; }
+        .form-check-input:checked { background-color: #0d6efd; border-color: #0d6efd; }
     </style>
 </head>
-<body class="bg-light">
-    <nav class="navbar navbar-dark bg-dark mb-4">
-        <div class="container">
-            <span class="navbar-brand">User Management</span>
-            ${user ? `<div class="text-white small">User: <strong>${user.email}</strong> | <a href="/logout" class="btn btn-outline-light btn-sm ms-2">Logout</a></div>` : ''}
-        </div>
-    </nav>
-    <div class="container">${body}</div>
-    <script>
-        function toggleAll(source) {
-            const checkboxes = document.getElementsByName('userIds');
-            for (let cb of checkboxes) cb.checked = source.checked;
-        }
-    </script>
+<body class="p-4">
+    ${user ? `<div class="mb-3 text-end small">Logged in as: <b>${user.email}</b> | <a href="/logout">Logout</a></div>` : ''}
+    <div class="container-fluid">${body}</div>
 </body>
 </html>
 `;
@@ -91,19 +85,110 @@ app.post('/login', async (req, res) => {
     }
 });
 
-app.get('/register', (req, res) => {
+app.get('/users', async (req, res) => {
+    const result = await pool.query('SELECT * FROM users ORDER BY id ASC');
+    const rows = result.rows.map(u => `
+        <tr class="align-middle">
+            <td><input type="checkbox" class="form-check-input" name="userIds" value="${u.id}"></td>
+            <td>
+                <span class="user-name">${u.name}</span>
+                <span class="user-id">ID: ${u.id}</span>
+            </td>
+            <td>${u.email} <i class="bi bi-arrow-down small text-muted"></i></td>
+            <td>${u.is_blocked ? 'Blocked' : 'Active'}</td>
+            <td>
+                <div class="small">${u.last_login_time ? u.last_login_time.toLocaleString() : 'less than a minute ago'}</div>
+                <div class="d-flex gap-1 mt-1">
+                    <div style="height:12px; width:4px; background:#a3c2ff"></div>
+                    <div style="height:15px; width:4px; background:#70a1ff"></div>
+                    <div style="height:10px; width:4px; background:#a3c2ff"></div>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+
     res.send(layout(`
-        <div class="row justify-content-center mt-5">
-            <div class="col-md-4 card shadow-sm p-4 text-center">
-                <h2 class="h4 mb-4">Registration</h2>
-                <form action="/register" method="POST">
-                    <div class="mb-2"><input type="text" name="name" class="form-control" placeholder="Full Name" required></div>
-                    <div class="mb-3"><input type="email" name="email" class="form-control" placeholder="Email" required></div>
-                    <button class="btn btn-success w-100">Register</button>
-                </form>
+        <form action="/bulk" method="POST">
+            <div class="toolbar d-flex justify-content-between align-items-center mb-3">
+                <div class="d-flex gap-2">
+                    <button name="action" value="block" class="btn btn-custom btn-sm"><i class="bi bi-lock-fill"></i> Block</button>
+                    <button name="action" value="unblock" class="btn btn-custom btn-sm"><i class="bi bi-unlock-fill"></i></button>
+                    <button name="action" value="delete" class="btn btn-danger-custom btn-sm"><i class="bi bi-trash-fill"></i></button>
+                </div>
+                <div>
+                    <input type="text" class="form-control form-control-sm" placeholder="Filter" style="width: 250px;">
+                </div>
             </div>
-        </div>
-    `));
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th style="width: 40px;"><input type="checkbox" class="form-check-input" onclick="toggleAll(this)"></th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Status</th>
+                        <th>Last seen</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </form>
+    `, req.currentUser));
+});
+
+    res.send(layout(`
+        <form action="/bulk" method="POST">
+            <div class="toolbar d-flex justify-content-between align-items-center mb-3">
+                <div class="d-flex gap-2">
+                    <button name="action" value="block" class="btn btn-custom btn-sm"><i class="bi bi-lock-fill"></i> Block</button>
+                    <button name="action" value="unblock" class="btn btn-custom btn-sm"><i class="bi bi-unlock-fill"></i></button>
+                    <button name="action" value="delete" class="btn btn-danger-custom btn-sm"><i class="bi bi-trash-fill"></i></button>
+                </div>
+                <div>
+                    <input type="text" class="form-control form-control-sm" placeholder="Filter" style="width: 250px;">
+                </div>
+            </div>
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th style="width: 40px;"><input type="checkbox" class="form-check-input" onclick="toggleAll(this)"></th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Status</th>
+                        <th>Last seen</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </form>
+    `, req.currentUser));
+});
+
+    res.send(layout(`
+        <form action="/bulk" method="POST">
+            <div class="toolbar d-flex justify-content-between align-items-center mb-3">
+                <div class="d-flex gap-2">
+                    <button name="action" value="block" class="btn btn-custom btn-sm"><i class="bi bi-lock-fill"></i> Block</button>
+                    <button name="action" value="unblock" class="btn btn-custom btn-sm"><i class="bi bi-unlock-fill"></i></button>
+                    <button name="action" value="delete" class="btn btn-danger-custom btn-sm"><i class="bi bi-trash-fill"></i></button>
+                </div>
+                <div>
+                    <input type="text" class="form-control form-control-sm" placeholder="Filter" style="width: 250px;">
+                </div>
+            </div>
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th style="width: 40px;"><input type="checkbox" class="form-check-input" onclick="toggleAll(this)"></th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Status</th>
+                        <th>Last seen</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </form>
+    `, req.currentUser));
 });
 
 app.post('/register', async (req, res) => {
@@ -198,5 +283,6 @@ app.get('/logout', (req, res) => {
 module.exports = app;
 
 module.exports = app;
+
 
 
