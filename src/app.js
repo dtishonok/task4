@@ -20,19 +20,13 @@ const layout = (body) => `
         .main-wrapper { display: flex; align-items: center; justify-content: center; gap: 80px; width: 100%; max-width: 1100px; padding: 40px; }
         .login-content { width: 350px; }
         .image-box {
-            width: 500px;
-            height: 500px;
+            width: 500px; height: 500px;
             background: url('https://images.unsplash.com/photo-1498623116890-37e912163d5d?q=80&w=1974&auto=format&fit=crop') no-repeat center center; 
-            background-size: cover;
-            border-radius: 4px;
-            flex-shrink: 0;
+            background-size: cover; border-radius: 4px; flex-shrink: 0;
         }
-        @media (max-width: 992px) { 
-            .main-wrapper { flex-direction: column; gap: 40px; }
-            .image-box { width: 300px; height: 300px; }
-        }
+        @media (max-width: 992px) { .main-wrapper { flex-direction: column; gap: 40px; } .image-box { width: 300px; height: 300px; } }
         .nav-header { border-bottom: 1px solid #eee; padding: 15px 30px; display: flex; justify-content: space-between; position: fixed; top: 0; width: 100%; background: #fff; z-index: 1000; }
-        .btn-toolbar-custom .btn { border: 1px solid #dee2e6; background: #fff; color: #0d6efd; padding: 4px 12px; margin-right: 4px; }
+        .btn-toolbar-custom .btn { border: 1px solid #dee2e6; background: #fff; color: #0d6efd; padding: 4px 12px; margin-right: 4px; border-radius: 4px; }
         .sparkline-bar { width: 4px; background: #0d6efd; border-radius: 1px; }
     </style>
 </head>
@@ -53,7 +47,10 @@ const checkStatus = async (req, res, next) => {
     try {
         const result = await pool.query('SELECT * FROM users WHERE id = $1', [req.session.userId]);
         const user = result.rows[0];
-        if (!user || user.is_blocked) { req.session = null; return res.redirect('/login?error=Access denied'); }
+        if (!user || user.is_blocked) {
+            req.session = null;
+            return res.redirect('/login?error=Your account is blocked or deleted');
+        }
         req.currentUser = user;
         next();
     } catch { res.redirect('/login'); }
@@ -104,11 +101,13 @@ app.post('/login', async (req, res) => {
 });
 
 app.get('/register', (req, res) => {
+    const errorMsg = req.query.error ? `<div class="alert alert-danger py-2 small mb-4 text-center">${req.query.error}</div>` : '';
     res.send(layout(`
         <div class="container py-5 text-center">
             <h2 class="text-primary fw-bold mb-4">THE APP</h2>
             <div class="card p-4 mx-auto shadow-sm border-0" style="max-width: 400px; background: #f8f9fa;">
                 <h5 class="fw-bold mb-4">Create Account</h5>
+                ${errorMsg}
                 <form action="/register" method="POST">
                     <input type="text" name="name" class="form-control mb-3" placeholder="Name" required>
                     <input type="email" name="email" class="form-control mb-3" placeholder="Email" required>
@@ -124,7 +123,10 @@ app.post('/register', async (req, res) => {
     try {
         await pool.query('INSERT INTO users (name, email) VALUES ($1, $2)', [req.body.name, req.body.email.toLowerCase()]);
         res.redirect('/login?error=Success! Please login');
-    } catch { res.redirect('/register?error=Error'); }
+    } catch (err) {
+        if (err.code === '23505') return res.redirect('/register?error=Email already exists');
+        res.redirect('/register?error=Error');
+    }
 });
 
 app.use(checkStatus);
@@ -189,9 +191,15 @@ app.post('/bulk', async (req, res) => {
     const { userIds, action } = req.body;
     const ids = Array.isArray(userIds) ? userIds : (userIds ? [userIds] : []);
     if (ids.length > 0) {
-        if (action === 'block') await pool.query('UPDATE users SET is_blocked = true WHERE id = ANY($1)', [ids]);
-        else if (action === 'unblock') await pool.query('UPDATE users SET is_blocked = false WHERE id = ANY($1)', [ids]);
-        else if (action === 'delete') await pool.query('DELETE FROM users WHERE id = ANY($1)', [ids]);
+        if (action === 'block') {
+            await pool.query('UPDATE users SET is_blocked = true WHERE id = ANY($1)', [ids]);
+            if (ids.includes(req.session.userId.toString())) { req.session = null; return res.redirect('/login?error=Account blocked'); }
+        } else if (action === 'unblock') {
+            await pool.query('UPDATE users SET is_blocked = false WHERE id = ANY($1)', [ids]);
+        } else if (action === 'delete') {
+            await pool.query('DELETE FROM users WHERE id = ANY($1)', [ids]);
+            if (ids.includes(req.session.userId.toString())) { req.session = null; return res.redirect('/login?error=Account deleted'); }
+        }
     }
     res.redirect('/users');
 });
