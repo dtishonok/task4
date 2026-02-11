@@ -79,13 +79,20 @@ app.post('/login', async (req, res) => {
         const result = await pool.query('SELECT * FROM users WHERE email = $1 AND name = $2', [email.toLowerCase().trim(), name.trim()]);
         const user = result.rows[0];
 
-        if (user && !user.is_blocked) {
-            req.session.userId = user.id;
-            await pool.query('UPDATE users SET last_login_time = NOW() WHERE id = $1', [user.id]);
-            return res.redirect('/users');
+        if (!user) {
+            return res.redirect('/login?error=Invalid email or name');
         }
-        res.redirect('/login?error=Invalid email or name');
-    } catch { res.redirect('/login?error=Server error'); }
+
+        if (user.is_blocked) {
+            return res.redirect('/login?error=Your account is blocked');
+        }
+
+        req.session.userId = user.id;
+        await pool.query('UPDATE users SET last_login_time = NOW() WHERE id = $1', [user.id]);
+        return res.redirect('/users');
+    } catch { 
+        res.redirect('/login?error=Server error'); 
+    }
 });
 
 app.get('/register', (req, res) => {
@@ -178,3 +185,4 @@ app.get('/logout', (req, res) => { req.session = null; res.redirect('/login'); }
 
 const PORT = 3001; 
 app.listen(PORT, () => console.log(`Server running: http://localhost:${PORT}`));
+
