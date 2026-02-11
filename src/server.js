@@ -1,5 +1,6 @@
 const app = require('./app');
-const PORT = process.env.PORT || 3000;
+
+const PORT = process.env.PORT || 3001;
 
 const server = app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
@@ -7,9 +8,8 @@ const server = app.listen(PORT, () => {
 
 server.on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
-    console.error(`Port ${PORT} is already in use. Trying port ${PORT + 1}...`);
-    server.listen(PORT + 1);
+    console.error(`Port ${PORT} is already in use. Change the port or free it.`);
   } else {
-    console.error(err);
+    console.error('Server error:', err);
   }
 });
