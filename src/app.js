@@ -17,12 +17,15 @@ const layout = (body) => `
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
 <style>
-body { font-family: -apple-system, sans-serif; margin: 0; background: #fff; }
+body { font-family: -apple-system, sans-serif; margin: 0; background: #f4f7f9; }
 .login-page { display: flex; justify-content: center; align-items: center; height: 100vh; }
 .main-wrapper { display: flex; justify-content: center; align-items: center; gap: 80px; width: 100%; max-width: 1100px; padding: 40px; }
 .login-content { width: 350px; }
 .image-box { width: 500px; height: 500px; background: url('https://images.unsplash.com/photo-1498623116890-37e912163d5d?q=80&w=1974&auto=format&fit=crop') no-repeat center/cover; border-radius: 4px; flex-shrink: 0; }
 .nav-header { border-bottom: 1px solid #eee; padding: 15px 30px; display: flex; justify-content: space-between; position: fixed; top: 0; width: 100%; background: #fff; z-index: 1000; }
+.table-container { max-width: 1000px; margin: 100px auto; padding: 20px; }
+.last-seen { font-size: 0.85rem; color: #6c757d; }
+.last-seen i { margin-right: 5px; }
 </style>
 </head>
 <body>
@@ -44,7 +47,7 @@ const checkStatus = async (req, res, next) => {
         const user = result.rows[0];
         if (!user || user.is_blocked) {
             req.session = null;
-            return res.redirect('/login?error=Account blocked or deleted');
+            return res.redirect('/login?error=Your account is blocked');
         }
         req.currentUser = user;
         next();
@@ -127,34 +130,39 @@ app.use(checkStatus);
 
 app.get('/users', async (req, res) => {
     const result = await pool.query('SELECT * FROM users ORDER BY id ASC');
-    const rows = result.rows.map(u => `
-    <tr>
-      <td class="ps-4"><input type="checkbox" name="userIds" value="${u.id}" class="form-check-input"></td>
-      <td><b>${u.name}</b><br><small class="text-muted">ID: ${u.id}</small></td>
-      <td>${u.email}</td>
-      <td>${u.is_blocked ? '<span class="badge bg-danger">Blocked</span>' : '<span class="badge bg-success">Active</span>'}</td>
-      <td>${u.last_login_time ? u.last_login_time.toLocaleString() : 'Never'}</td>
-    </tr>
-  `).join('');
+    const rows = result.rows.map(u => {
+        const lastSeen = u.last_login_time 
+            ? `<span class="last-seen"><i class="bi bi-clock"></i> ${new Date(u.last_login_time).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>`
+            : '<span class="text-muted small">Never</span>';
+            
+        return `
+        <tr>
+          <td class="ps-3"><input type="checkbox" name="userIds" value="${u.id}" class="form-check-input"></td>
+          <td><b>${u.name}</b><br><small class="text-muted">ID: ${u.id}</small></td>
+          <td>${u.email}</td>
+          <td>${u.is_blocked ? '<span class="badge bg-danger">Blocked</span>' : '<span class="badge bg-success">Active</span>'}</td>
+          <td>${lastSeen}</td>
+        </tr>`;
+    }).join('');
 
     res.send(layout(`
     <div class="nav-header">
       <span class="text-primary fw-bold">THE APP</span>
       <div class="small">${req.currentUser.email} | <a href="/logout" class="text-danger">Logout</a></div>
     </div>
-    <div class="container" style="margin-top:100px;">
+    <div class="table-container">
       <form action="/bulk" method="POST">
         <div class="mb-3 d-flex gap-2">
           <button name="action" value="block" class="btn btn-outline-primary btn-sm"><i class="bi bi-lock-fill"></i> Block</button>
           <button name="action" value="unblock" class="btn btn-outline-secondary btn-sm"><i class="bi bi-unlock-fill"></i> Unblock</button>
           <button name="action" value="delete" class="btn btn-danger btn-sm"><i class="bi bi-trash-fill"></i> Delete</button>
         </div>
-        <div class="card shadow-sm">
-          <table class="table mb-0">
+        <div class="card shadow-sm border-0">
+          <table class="table mb-0 align-middle">
             <thead class="table-light">
               <tr>
-                <th class="ps-4" style="width:50px;"><input type="checkbox" onclick="toggleAll(this)"></th>
-                <th>Name</th><th>Email</th><th>Status</th><th>Last Seen</th>
+                <th class="ps-3" style="width:50px;"><input type="checkbox" onclick="toggleAll(this)"></th>
+                <th>User Name</th><th>Email</th><th>Status</th><th>Last Logged In</th>
               </tr>
             </thead>
             <tbody>${rows}</tbody>
@@ -183,6 +191,9 @@ app.post('/bulk', async (req, res) => {
 
 app.get('/logout', (req, res) => { req.session = null; res.redirect('/login'); });
 
-const PORT = 3001; 
+const PORT = process.env.PORT || 3001; 
 app.listen(PORT, () => console.log(`Server running: http://localhost:${PORT}`));
+
+module.exports = app;
+
 
