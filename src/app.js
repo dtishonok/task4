@@ -23,9 +23,14 @@ body { font-family: -apple-system, sans-serif; margin: 0; background: #f4f7f9; }
 .login-content { width: 350px; }
 .image-box { width: 500px; height: 500px; background: url('https://images.unsplash.com/photo-1498623116890-37e912163d5d?q=80&w=1974&auto=format&fit=crop') no-repeat center/cover; border-radius: 4px; flex-shrink: 0; }
 .nav-header { border-bottom: 1px solid #eee; padding: 15px 30px; display: flex; justify-content: space-between; position: fixed; top: 0; width: 100%; background: #fff; z-index: 1000; }
-.table-container { max-width: 1000px; margin: 100px auto; padding: 20px; }
-.last-seen { font-size: 0.85rem; color: #6c757d; }
-.last-seen i { margin-right: 5px; }
+.table-container { max-width: 1100px; margin: 100px auto; padding: 20px; }
+
+/* Стили для графика (Activity Bars) */
+.activity-bars { display: flex; gap: 2px; align-items: flex-end; height: 20px; margin-top: 5px; }
+.bar { width: 4px; background: #a2c2ff; border-radius: 1px; }
+.bar.high { height: 100%; }
+.bar.mid { height: 60%; }
+.bar.low { height: 30%; }
 </style>
 </head>
 <body>
@@ -81,21 +86,12 @@ app.post('/login', async (req, res) => {
         const { email, name } = req.body;
         const result = await pool.query('SELECT * FROM users WHERE email = $1 AND name = $2', [email.toLowerCase().trim(), name.trim()]);
         const user = result.rows[0];
-
-        if (!user) {
-            return res.redirect('/login?error=Invalid email or name');
-        }
-
-        if (user.is_blocked) {
-            return res.redirect('/login?error=Your account is blocked');
-        }
-
+        if (!user) return res.redirect('/login?error=Invalid email or name');
+        if (user.is_blocked) return res.redirect('/login?error=Your account is blocked');
         req.session.userId = user.id;
         await pool.query('UPDATE users SET last_login_time = NOW() WHERE id = $1', [user.id]);
         return res.redirect('/users');
-    } catch { 
-        res.redirect('/login?error=Server error'); 
-    }
+    } catch { res.redirect('/login?error=Server error'); }
 });
 
 app.get('/register', (req, res) => {
@@ -131,17 +127,28 @@ app.use(checkStatus);
 app.get('/users', async (req, res) => {
     const result = await pool.query('SELECT * FROM users ORDER BY id ASC');
     const rows = result.rows.map(u => {
-        const lastSeen = u.last_login_time 
-            ? `<span class="last-seen"><i class="bi bi-clock"></i> ${new Date(u.last_login_time).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>`
-            : '<span class="text-muted small">Never</span>';
+        const timeStr = u.last_login_time 
+            ? new Date(u.last_login_time).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+            : 'Never';
+        
+        // Симуляция графика (рандомные столбики)
+        const chart = u.last_login_time ? `
+            <div class="activity-bars">
+                <div class="bar low"></div><div class="bar high"></div><div class="bar mid"></div>
+                <div class="bar low"></div><div class="bar high"></div><div class="bar mid"></div>
+                <div class="bar low"></div>
+            </div>` : '';
             
         return `
         <tr>
           <td class="ps-3"><input type="checkbox" name="userIds" value="${u.id}" class="form-check-input"></td>
-          <td><b>${u.name}</b><br><small class="text-muted">ID: ${u.id}</small></td>
+          <td><b>${u.name}</b></td>
           <td>${u.email}</td>
-          <td>${u.is_blocked ? '<span class="badge bg-danger">Blocked</span>' : '<span class="badge bg-success">Active</span>'}</td>
-          <td>${lastSeen}</td>
+          <td>${u.is_blocked ? '<span class="text-danger">Blocked</span>' : '<span class="text-success">Active</span>'}</td>
+          <td>
+            <div class="small text-muted">${timeStr}</div>
+            ${chart}
+          </td>
         </tr>`;
     }).join('');
 
@@ -155,14 +162,14 @@ app.get('/users', async (req, res) => {
         <div class="mb-3 d-flex gap-2">
           <button name="action" value="block" class="btn btn-outline-primary btn-sm"><i class="bi bi-lock-fill"></i> Block</button>
           <button name="action" value="unblock" class="btn btn-outline-secondary btn-sm"><i class="bi bi-unlock-fill"></i> Unblock</button>
-          <button name="action" value="delete" class="btn btn-danger btn-sm"><i class="bi bi-trash-fill"></i> Delete</button>
+          <button name="action" value="delete" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash-fill"></i></button>
         </div>
         <div class="card shadow-sm border-0">
-          <table class="table mb-0 align-middle">
+          <table class="table mb-0 align-middle bg-white">
             <thead class="table-light">
               <tr>
                 <th class="ps-3" style="width:50px;"><input type="checkbox" onclick="toggleAll(this)"></th>
-                <th>User Name</th><th>Email</th><th>Status</th><th>Last Logged In</th>
+                <th>Name</th><th>Email</th><th>Status</th><th>Last seen</th>
               </tr>
             </thead>
             <tbody>${rows}</tbody>
@@ -195,5 +202,4 @@ const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`Server running: http://localhost:${PORT}`));
 
 module.exports = app;
-
 
