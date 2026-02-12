@@ -1,7 +1,7 @@
 const express = require('express');
 const session = require('cookie-session');
 const pool = require('./db');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const app = express();
 
 app.use(express.json());
@@ -231,6 +231,7 @@ const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`Server running: http://localhost:${PORT}`));
 
 module.exports = app;
+
 
 
 
