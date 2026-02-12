@@ -1,6 +1,7 @@
 const express = require('express');
 const session = require('cookie-session');
-const pool = require('./db'); 
+const pool = require('./db');
+const bcrypt = require('bcrypt');
 const app = express();
 
 app.use(express.json());
@@ -24,8 +25,6 @@ body { font-family: -apple-system, sans-serif; margin: 0; background: #f4f7f9; }
 .image-box { width: 500px; height: 500px; background: url('https://images.unsplash.com/photo-1498623116890-37e912163d5d?q=80&w=1974&auto=format&fit=crop') no-repeat center/cover; border-radius: 4px; flex-shrink: 0; }
 .nav-header { border-bottom: 1px solid #eee; padding: 15px 30px; display: flex; justify-content: space-between; position: fixed; top: 0; width: 100%; background: #fff; z-index: 1000; }
 .table-container { max-width: 1100px; margin: 100px auto; padding: 20px; }
-
-/* Стили для графика (Activity Bars) */
 .activity-bars { display: flex; gap: 2px; align-items: flex-end; height: 20px; margin-top: 5px; }
 .bar { width: 4px; background: #a2c2ff; border-radius: 1px; }
 .bar.high { height: 100%; }
@@ -70,7 +69,7 @@ app.get('/login', (req, res) => {
           ${errorMsg}
           <form action="/login" method="POST">
             <input type="email" name="email" class="form-control mb-3" placeholder="Email" required>
-            <input type="text" name="name" class="form-control mb-3" placeholder="Your Name" required>
+            <input type="password" name="password" class="form-control mb-3" placeholder="Password" required>
             <button class="btn btn-primary w-100 py-2 fw-bold">Sign In</button>
           </form>
           <div class="mt-4 small text-muted">New here? <a href="/register" class="text-primary fw-bold">Register</a></div>
@@ -83,15 +82,36 @@ app.get('/login', (req, res) => {
 
 app.post('/login', async (req, res) => {
     try {
-        const { email, name } = req.body;
-        const result = await pool.query('SELECT * FROM users WHERE email = $1 AND name = $2', [email.toLowerCase().trim(), name.trim()]);
+        const { email, password } = req.body;
+
+        const result = await pool.query(
+            'SELECT * FROM users WHERE email = $1',
+            [email.toLowerCase().trim()]
+        );
+
         const user = result.rows[0];
-        if (!user) return res.redirect('/login?error=Invalid email or name');
+
+        if (!user) return res.redirect('/login?error=Invalid email or password');
         if (user.is_blocked) return res.redirect('/login?error=Your account is blocked');
+
+        const validPassword = await bcrypt.compare(password, user.password);
+
+        if (!validPassword) {
+            return res.redirect('/login?error=Invalid email or password');
+        }
+
         req.session.userId = user.id;
-        await pool.query('UPDATE users SET last_login_time = NOW() WHERE id = $1', [user.id]);
+
+        await pool.query(
+            'UPDATE users SET last_login_time = NOW() WHERE id = $1',
+            [user.id]
+        );
+
         return res.redirect('/users');
-    } catch { res.redirect('/login?error=Server error'); }
+
+    } catch {
+        res.redirect('/login?error=Server error');
+    }
 });
 
 app.get('/register', (req, res) => {
@@ -104,6 +124,7 @@ app.get('/register', (req, res) => {
           <form action="/register" method="POST">
             <input type="text" name="name" class="form-control mb-3" placeholder="Full Name" required>
             <input type="email" name="email" class="form-control mb-3" placeholder="Email Address" required>
+            <input type="password" name="password" class="form-control mb-3" placeholder="Password" required>
             <button class="btn btn-primary w-100 py-2 fw-bold">Register</button>
           </form>
           <div class="mt-3 small"><a href="/login">Back to Sign In</a></div>
@@ -116,10 +137,19 @@ app.get('/register', (req, res) => {
 
 app.post('/register', async (req, res) => {
     try {
-        const { name, email } = req.body;
-        await pool.query('INSERT INTO users (name, email) VALUES ($1, $2)', [name.trim(), email.toLowerCase().trim()]);
+        const { name, email, password } = req.body;
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        await pool.query(
+            'INSERT INTO users (name, email, password) VALUES ($1, $2, $3)',
+            [name.trim(), email.toLowerCase().trim(), hashedPassword]
+        );
+
         res.redirect('/login?error=Success! Please sign in');
-    } catch { res.redirect('/login?error=Email already exists'); }
+    } catch {
+        res.redirect('/login?error=Email already exists');
+    }
 });
 
 app.use(checkStatus);
@@ -130,8 +160,7 @@ app.get('/users', async (req, res) => {
         const timeStr = u.last_login_time 
             ? new Date(u.last_login_time).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
             : 'Never';
-        
-        // Симуляция графика (рандомные столбики)
+            
         const chart = u.last_login_time ? `
             <div class="activity-bars">
                 <div class="bar low"></div><div class="bar high"></div><div class="bar mid"></div>
@@ -198,8 +227,9 @@ app.post('/bulk', async (req, res) => {
 
 app.get('/logout', (req, res) => { req.session = null; res.redirect('/login'); });
 
-const PORT = process.env.PORT || 3001; 
+const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`Server running: http://localhost:${PORT}`));
 
 module.exports = app;
+
 
